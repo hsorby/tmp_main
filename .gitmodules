@@ -1,0 +1,6 @@
+[submodule "utilities"]
+	path = utilities
+	url = https://github.com/OpenCMISS-Utils/utilities.git
+[submodule "dependencies"]
+	path = dependencies
+	url = https://github.com/OpenCMISS-Dependencies/dependencies.git
