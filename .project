@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>OpenCMISS</name>
+	<comment></comment>
+	<projects>
+		<project>cm</project>
+		<project>OCM_Dependencies</project>
+		<project>OCM_Utils</project>
+	</projects>
+	<buildSpec>
+	</buildSpec>
+	<natures>
+	</natures>
+</projectDescription>
