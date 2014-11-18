@@ -22,7 +22,7 @@ SET(OPENCMISS_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install)
 add_subdirectory(utilities)
 
 LIST(APPEND CMAKE_MODULE_PATH ${OPENCMISS_UTILITIES_DIR}/CMakeModules ${OPENCMISS_UTILITIES_DIR}/CMakeScripts)
-include(BuildMacros)
+include(OCMUtilsBuildMacros)
 include(ExternalProject)
 
 if (BUILD_IRON)
