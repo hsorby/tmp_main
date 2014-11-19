@@ -6,4 +6,4 @@
 	url = https://github.com/OpenCMISS-Dependencies/dependencies.git
 [submodule "iron"]
 	path = iron
-	url = git@github.com:rondiplomatico/cm.git
+	url = https://github.com/rondiplomatico/cm.git
