@@ -1,6 +1,10 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.4 FATAL_ERROR)
 project(OpenCMISS)
 
+#include(utilities/FunctionDefinitions.cmake)
+#PRINT_VARS()
+#return()
+
 # ==============================
 # Initial setup instructions
 # ==============================
@@ -60,7 +64,7 @@ if (NEED_DEPENDENCIES)
 		STAMP_DIR ${OPENCMISS_DEPENDENCIES_BINARY_DIR}/ep_stamp
 		#--Configure step-------------
 		SOURCE_DIR ${OPENCMISS_DEPENDENCIES_DIR}
-		BINARY_DIR ${OPENCMISS_DEPENDENCIES_DIR}/build
+		BINARY_DIR ${OPENCMISS_DEPENDENCIES_BINARY_DIR}
 		CMAKE_ARGS ${PROJECT_CMAKE_ARGS}
 		#--Build step-----------------
 		BUILD_COMMAND ${LOCAL_PLATFORM_BUILD_COMMAND}

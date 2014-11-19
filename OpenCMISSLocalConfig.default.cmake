@@ -1,5 +1,3 @@
-SET(OCM_UTILITIES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../utils)
-
 # ==============================
 # Initial setup instructions
 # ==============================
@@ -9,7 +7,7 @@ option(OCM_DEVELOPER_MODE "Handle the packages as proper submodules. DEVELOPERS 
 # Build configuration
 # ==============================
 # Use architecture information paths
-SET(OCM_USE_ARCHITECTURE_PATH NO)
+SET(OCM_USE_ARCHITECTURE_PATH YES)
 
 # Precision to build (if applicable)
 # Valid choices are s,d,c,z and any combinations.
