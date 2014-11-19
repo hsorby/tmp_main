@@ -24,8 +24,6 @@ add_subdirectory(utilities)
 if (NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.cmake)
     configure_file(${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.default.cmake ${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.cmake COPYONLY)
 endif()
-# Read local config
-include(OpenCMISSLocalConfig)
 
 # Set up include path
 LIST(APPEND CMAKE_MODULE_PATH 
