@@ -6,6 +6,9 @@ option(OCM_DEVELOPER_MODE "Handle the packages as proper submodules. DEVELOPERS 
 # ==============================
 # Build configuration
 # ==============================
+option(BUILD_IRON "Build OpenCMISS-Iron" YES)
+option(BUILD_ZINC "Build OpenCMISS-Zinc" NO)
+
 # Use architecture information paths
 SET(OCM_USE_ARCHITECTURE_PATH YES)
 
