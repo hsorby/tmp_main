@@ -30,18 +30,15 @@ SET(BUILD_TESTS ON)
 # ==============================
 # MPI
 # ==============================
-# This finds a default MPI_<lang>_COMPILER for every language.
-# The chosen compilers will be passed to any dependency package
-# for consistent builds.
-find_package(MPI REQUIRED)
-
-# ==============================
-# Customisation of dependencies
-# ==============================
-# Planned: For inclusion of external, custom libraries you'd go like  
-#SET(<PROJECT>_LIBRARIES )
-#SET(<PROJECT>BLAS_INCLUDE_DIRS )
-# A script/macro that automatically turns module packages to config packages is still required.
+# Enter a custom mpi root directory here for a different mpi implementation.
+# Leave as-is to use default system mpi.
+#SET(MPI_HOME ~/software/openmpi-1.8.3_install)
+# Further, you can specify an explicit name of the compiler
+# executable (no path, just the name).
+# This will be used independently of (but possibly with) the MPI_HOME setting.
+#SET(MPI_C_COMPILER mpicc)
+#SET(MPI_CXX_COMPILER mpic++)
+#SET(MPI_Fortran_COMPILER mpif77)
 
 # Force to use all OpenCMISS dependencies - long compilation, but will work
 SET(FORCE_OCM_ALLDEPS NO)
