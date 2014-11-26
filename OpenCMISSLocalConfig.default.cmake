@@ -10,7 +10,7 @@ option(BUILD_IRON "Build OpenCMISS-Iron" YES)
 option(BUILD_ZINC "Build OpenCMISS-Zinc" NO)
 
 # Use architecture information paths
-SET(OCM_USE_ARCHITECTURE_PATH YES)
+SET(OCM_USE_ARCHITECTURE_PATH NO)
 
 # Precision to build (if applicable)
 # Valid choices are s,d,c,z and any combinations.
@@ -27,12 +27,40 @@ SET(INT_TYPE int32)
 # Also build tests?
 SET(BUILD_TESTS ON)
 
+# Type of libraries to build
+option(BUILD_SHARED_LIBS "Build shared libraries" NO)
+
+# ==============================
+# Compiler
+# ==============================
+
 # ==============================
 # MPI
 # ==============================
+# Global MPI flag (not cared about eveywhere yet!)
+SET(OCM_USE_MPI YES)
+# @@@ linux @@@
+# mpich: gnu
+# mpich2: gnu
+# openmpi: gnu
+# intel: needs I_MPI_ROOT
+#  - also needs to know if GNU or INTEL compiler
+# mvapich2: works only with MPI_INSTALL_DIR defined
+# poe: not implemented
+# cray: have special path
+# @@@ aix @@@
+# poe: 
+# @@@ windows @@@
+# mpich, mpich2: fixed directory
+#SET(MPI mpich)
+#SET(MPI mpich2)
+#SET(MPI openmpi)
+#SET(MPI intel)
+
 # Enter a custom mpi root directory here for a different mpi implementation.
 # Leave as-is to use default system mpi.
 #SET(MPI_HOME ~/software/openmpi-1.8.3_install)
+
 # Further, you can specify an explicit name of the compiler
 # executable (no path, just the name).
 # This will be used independently of (but possibly with) the MPI_HOME setting.
