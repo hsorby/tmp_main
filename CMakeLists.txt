@@ -79,11 +79,16 @@ LIST(APPEND PROJECT_CMAKE_ARGS
     -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH_ESC}
     -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
 )
-# Add compiler flags
+# Add compilers and flags
 foreach(lang C CXX Fortran)
     if (CMAKE_${lang}_FLAGS)
         LIST(APPEND PROJECT_CMAKE_ARGS
             -DCMAKE_${lang}_FLAGS=${CMAKE_${lang}_FLAGS}
+        )
+    endif()
+    if(CMAKE_${lang}_COMPILER)
+        LIST(APPEND PROJECT_CMAKE_ARGS
+            -DCMAKE_${lang}_COMPILER=${CMAKE_${lang}_COMPILER}
         )
     endif()
 endforeach()
@@ -99,6 +104,7 @@ LIST(APPEND DEPENDENCIES_CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX=${CMAKE_DEPENDENCIES_INSTALL_PREFIX}
 )
 ExternalProject_Add(DEPENDENCIES
+    #DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/OpenCMISSLocalConfig.cmake
     PREFIX ${OPENCMISS_DEPENDENCIES_DIR}
 	TMP_DIR ${OPENCMISS_DEPENDENCIES_BINARY_DIR}/ep_tmp
 	STAMP_DIR ${OPENCMISS_DEPENDENCIES_BINARY_DIR}/ep_stamp
@@ -110,6 +116,10 @@ ExternalProject_Add(DEPENDENCIES
 	BUILD_COMMAND ${LOCAL_PLATFORM_BUILD_COMMAND}
 	INSTALL_COMMAND "" # No install for dependencies main project
 )
+# Remove the CMake Cache of dependencies when calling make clean!
+# Otherwise, changes in the localconfig wont be propagated
+set_property(DIRECTORY ${OPENCMISS_DEPENDENCIES_BINARY_DIR}
+    PROPERTY ADDITIONAL_MAKE_CLEAN_FILES CMakeCache.txt)
 
 ####################################
 # Iron
