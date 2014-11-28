@@ -118,8 +118,8 @@ ExternalProject_Add(DEPENDENCIES
 )
 # Remove the CMake Cache of dependencies when calling make clean!
 # Otherwise, changes in the localconfig wont be propagated
-set_property(DIRECTORY ${OPENCMISS_DEPENDENCIES_BINARY_DIR}
-    PROPERTY ADDITIONAL_MAKE_CLEAN_FILES CMakeCache.txt)
+#set_property(DIRECTORY ${OPENCMISS_DEPENDENCIES_BINARY_DIR}
+#    PROPERTY ADDITIONAL_MAKE_CLEAN_FILES CMakeCache.txt)
 
 ####################################
 # Iron
