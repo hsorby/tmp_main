@@ -4,44 +4,46 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.4 FATAL_ERROR)
 #PRINT_VARS()
 #return()
 
-# ==========================
-# Initial setup instructions
-# ==========================
-if (NOT WIN32 AND NOT CMAKE_BUILD_TYPE)
-    SET(CMAKE_BUILD_TYPE RELEASE)
-    message(STATUS "No CMAKE_BUILD_TYPE has been defined. Using RELEASE.")
-endif()
-LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-# Make sure the localconfig file exists
-if (NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.cmake)
-    configure_file(${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.default.cmake ${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.cmake COPYONLY)
-endif()
-
 # These are default locations for utilities and dependencies
 SET(OPENCMISS_UTILITIES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/utilities)
 SET(OPENCMISS_DEPENDENCIES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dependencies)
 
+# ==========================
+# First-time only instructions
+# Make sure the localconfig file exists
+if (NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.cmake)
+    configure_file(${OPENCMISS_UTILITIES_DIR}/OpenCMISSLocalConfig.template.cmake
+        ${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.cmake COPYONLY)
+endif()
+
 # Set up include path
 LIST(APPEND CMAKE_MODULE_PATH 
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${OPENCMISS_UTILITIES_DIR}/CMakeFindModuleWrappers
     ${OPENCMISS_UTILITIES_DIR}/CMakeModules
     ${OPENCMISS_UTILITIES_DIR}/CMakeScripts)
 
 # Check utilities first (this ensures that CMake is new enough and other tools are available)
-add_subdirectory(utilities)
+include(CMakeCheck)
 
+# Start actual project
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0 FATAL_ERROR)
 project(OpenCMISS VERSION 1.0 LANGUAGES C CXX Fortran)
+if (NOT WIN32 AND NOT CMAKE_BUILD_TYPE)
+    SET(CMAKE_BUILD_TYPE RELEASE)
+    message(STATUS "No CMAKE_BUILD_TYPE has been defined. Using RELEASE.")
+endif()
 
 # Load macros
 include(OCMUtilsBuildMacros)
 include(OCMUtilsArchitecture)
 include(ExternalProject)
 
-########################
-# Read local config
-########################
-include(OpenCMISSLocalConfig)
+# Include utilities dir (thus far, will probably be own external project)
+
+########################################################################
+# Read configuration (defaults & local)
+include(OpenCMISSConfig)
 
 # ABI detection
 #if (NOT ABI)
@@ -61,11 +63,9 @@ if (OCM_USE_MPI)
 endif()
 #message(STATUS "MPI_C_COMPILER: ${MPI_C_COMPILER}, MPI_CXX_COMPILER: ${MPI_CXX_COMPILER}")
 
-get_architecture_path(ARCHITECTURE_PATH)
-get_build_type_extra(BUILDTYPEEXTRA)
-SET(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install/${ARCHITECTURE_PATH}/${BUILDTYPEEXTRA})
-# Dependencies go into dependencies subfolder
-SET(CMAKE_DEPENDENCIES_INSTALL_PREFIX ${OPENCMISS_DEPENDENCIES_DIR}/install/${ARCHITECTURE_PATH}/${BUILDTYPEEXTRA})
+if(OCM_USE_MT)
+    find_package(OpenMP REQUIRED)
+endif()
 
 ####################################
 # Collect common arguments
@@ -95,34 +95,72 @@ endforeach()
 #message(STATUS "OpenCMISS common external project args:\n${PROJECT_CMAKE_ARGS}")
 
 ####################################
+# Set up installation paths (iron, zinc)
+get_architecture_path(ARCHITECTURE_PATH)
+# Extra path segment for single configuration - will give release/debug/...
+get_build_type_extra(BUILDTYPEEXTRA)
+# everything from the OpenCMISS main project goes into ./install/...
+# (except utilities and dependencies, they have their own install subtree)
+SET(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install/${ARCHITECTURE_PATH}/${BUILDTYPEEXTRA})
+
+########################################################################
+# Utilities
+########################################################################
+SET(OPENCMISS_UTILITIES_BINARY_DIR ${OPENCMISS_UTILITIES_DIR}/build) #/${ARCHITECTURE_PATH}
+GET_BUILD_COMMANDS(BUILD_COMMAND DUMMY_INSTALL_COMMAND ${OPENCMISS_UTILITIES_BINARY_DIR} FALSE)
+ExternalProject_Add(UTILITIES
+    PREFIX ${OPENCMISS_UTILITIES_DIR}
+	TMP_DIR ${OPENCMISS_UTILITIES_BINARY_DIR}/ep_tmp
+	STAMP_DIR ${OPENCMISS_UTILITIES_BINARY_DIR}/ep_stamp
+	#--Configure step-------------
+	CMAKE_COMMAND ${CMAKE_COMMAND} --no-warn-unused-cli
+	SOURCE_DIR ${OPENCMISS_UTILITIES_DIR}
+	BINARY_DIR ${OPENCMISS_UTILITIES_BINARY_DIR}
+	CMAKE_ARGS ${PROJECT_CMAKE_ARGS}
+	#--Build step-----------------
+	BUILD_COMMAND ${BUILD_COMMAND}
+	INSTALL_COMMAND "" # No install for utilities main project
+)
+
+########################################################################
 # Dependencies
+########################################################################
 SET(OPENCMISS_DEPENDENCIES_BINARY_DIR ${OPENCMISS_DEPENDENCIES_DIR}/build/${ARCHITECTURE_PATH})
-GET_BUILD_COMMANDS(LOCAL_PLATFORM_BUILD_COMMAND LOCAL_PLATFORM_INSTALL_COMMAND ${OPENCMISS_DEPENDENCIES_BINARY_DIR} FALSE)
+# Dependencies go into dependencies subfolder
+SET(OPENCMISS_DEPENDENCIES_INSTALL_PREFIX )
+GET_BUILD_COMMANDS(BUILD_COMMAND DUMMY_INSTALL_COMMAND ${OPENCMISS_DEPENDENCIES_BINARY_DIR} FALSE)
 # Add dependency-specific arguments
 SET(DEPENDENCIES_CMAKE_ARGS ${PROJECT_CMAKE_ARGS})
 LIST(APPEND DEPENDENCIES_CMAKE_ARGS
-    -DCMAKE_INSTALL_PREFIX=${CMAKE_DEPENDENCIES_INSTALL_PREFIX}
+    -DCMAKE_INSTALL_PREFIX=${OPENCMISS_DEPENDENCIES_DIR}/install/${ARCHITECTURE_PATH}/${BUILDTYPEEXTRA}
 )
 ExternalProject_Add(DEPENDENCIES
-    #DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/OpenCMISSLocalConfig.cmake
+    DEPENDS UTILITIES
     PREFIX ${OPENCMISS_DEPENDENCIES_DIR}
 	TMP_DIR ${OPENCMISS_DEPENDENCIES_BINARY_DIR}/ep_tmp
 	STAMP_DIR ${OPENCMISS_DEPENDENCIES_BINARY_DIR}/ep_stamp
 	#--Configure step-------------
+	CMAKE_COMMAND ${CMAKE_COMMAND} --no-warn-unused-cli
 	SOURCE_DIR ${OPENCMISS_DEPENDENCIES_DIR}
 	BINARY_DIR ${OPENCMISS_DEPENDENCIES_BINARY_DIR}
 	CMAKE_ARGS ${DEPENDENCIES_CMAKE_ARGS}
 	#--Build step-----------------
-	BUILD_COMMAND ${LOCAL_PLATFORM_BUILD_COMMAND}
+	BUILD_COMMAND ${BUILD_COMMAND}
 	INSTALL_COMMAND "" # No install for dependencies main project
 )
-# Remove the CMake Cache of dependencies when calling make clean!
-# Otherwise, changes in the localconfig wont be propagated
-#set_property(DIRECTORY ${OPENCMISS_DEPENDENCIES_BINARY_DIR}
-#    PROPERTY ADDITIONAL_MAKE_CLEAN_FILES CMakeCache.txt)
 
-####################################
+########################################################################
+# Remove the CMake Cache of utils/dependencies when calling make clean!
+# Otherwise, changes in the localconfig wont be propagated
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    PROPERTY ADDITIONAL_MAKE_CLEAN_FILES 
+    ${OPENCMISS_UTILITIES_BINARY_DIR}/CMakeCache.txt
+    ${OPENCMISS_DEPENDENCIES_BINARY_DIR}/CMakeCache.txt
+)
+
+########################################################################
 # Iron
+########################################################################
 if (BUILD_IRON)
     SET(IRON_CMAKE_ARGS ${PROJECT_CMAKE_ARGS})
 	LIST(APPEND IRON_CMAKE_ARGS
@@ -146,6 +184,7 @@ if (BUILD_IRON)
 		DOWNLOAD_DIR ${PROJECT_FOLDER}/ep_dl
         ${USERMODE_DOWNLOAD_CMDS}
 		#--Configure step-------------
+		CMAKE_COMMAND ${CMAKE_COMMAND} --no-warn-unused-cli
 		SOURCE_DIR ${OpenCMISS_SOURCE_DIR}/iron
 		BINARY_DIR ${PROJECT_FOLDER}
 		CMAKE_ARGS ${IRON_CMAKE_ARGS}
