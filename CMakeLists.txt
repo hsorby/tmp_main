@@ -12,7 +12,7 @@ SET(OPENCMISS_DEPENDENCIES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dependencies)
 # First-time only instructions
 # Make sure the localconfig file exists
 if (NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.cmake)
-    configure_file(${OPENCMISS_UTILITIES_DIR}/OpenCMISSLocalConfig.template.cmake
+    configure_file(${OPENCMISS_UTILITIES_DIR}/CMakeScripts/OpenCMISSLocalConfig.template.cmake
         ${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.cmake COPYONLY)
 endif()
 
