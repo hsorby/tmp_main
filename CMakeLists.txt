@@ -68,6 +68,12 @@ if(OCM_USE_MT)
 endif()
 
 ####################################
+# Checks for known issues
+if (CMAKE_COMPILER_IS_GNUC AND MPI STREQUAL intel)
+    message(FATAL_ERROR "Invalid compiler/MPI combination: Cannot build with GNU compiler and Intel MPI.")
+endif()
+
+####################################
 # Collect common arguments
 SET(PROJECT_CMAKE_ARGS )
 # As the CMAKE_ARGS are a list themselves, we need to treat the ; in the (possible) list of module_paths
