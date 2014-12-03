@@ -4,16 +4,15 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.4 FATAL_ERROR)
 #PRINT_VARS()
 #return()
 
-# These are default locations for utilities and dependencies
+# These are default locations (bound to submodule paths!)
 SET(OPENCMISS_UTILITIES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/utilities)
 SET(OPENCMISS_DEPENDENCIES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dependencies)
-
-# ==========================
-# First-time only instructions
-# Make sure the localconfig file exists
-if (NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.cmake)
-    configure_file(${OPENCMISS_UTILITIES_DIR}/CMakeScripts/OpenCMISSLocalConfig.template.cmake
-        ${CMAKE_CURRENT_LIST_DIR}/OpenCMISSLocalConfig.cmake COPYONLY)
+SET(OPENCMISS_IRON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/iron)
+# If no configuration dir is passed, use the current build location
+# This is needed so that the cmake scripts for deps, utils, iron etc will get the right location for the
+# config file
+if(NOT OPENCMISS_CONFIG_DIR)
+    SET(OPENCMISS_CONFIG_DIR ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 # Set up include path
@@ -43,6 +42,12 @@ include(ExternalProject)
 
 ########################################################################
 # Read configuration (defaults & local)
+# Make sure a localconfig file exists
+if (NOT EXISTS ${OPENCMISS_CONFIG_DIR}/OpenCMISSLocalConfig.cmake)
+    configure_file(${OPENCMISS_UTILITIES_DIR}/CMakeScripts/OpenCMISSLocalConfig.template.cmake
+        ${OPENCMISS_CONFIG_DIR}/OpenCMISSLocalConfig.cmake COPYONLY)
+endif()
+
 include(OpenCMISSConfig)
 
 # ABI detection
@@ -80,10 +85,11 @@ SET(PROJECT_CMAKE_ARGS )
 # specially. Therefore CMAKE has a special command $<SEMICOLON>
 STRING(REPLACE ";" "$<SEMICOLON>" CMAKE_MODULE_PATH_ESC "${CMAKE_MODULE_PATH}")
 LIST(APPEND PROJECT_CMAKE_ARGS
-    -DOPENCMISS_BUILD=YES # Flag for simple check
-    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DOPENCMISS_BUILD:BOOL=YES # Flag for simple check
+    -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
     -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH_ESC}
     -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
+    -DOPENCMISS_CONFIG_DIR:PATH=${OPENCMISS_CONFIG_DIR}
 )
 # Add compilers and flags
 foreach(lang C CXX Fortran)
@@ -133,12 +139,12 @@ ExternalProject_Add(UTILITIES
 ########################################################################
 SET(OPENCMISS_DEPENDENCIES_BINARY_DIR ${OPENCMISS_DEPENDENCIES_DIR}/build/${ARCHITECTURE_PATH})
 # Dependencies go into dependencies subfolder
-SET(OPENCMISS_DEPENDENCIES_INSTALL_PREFIX )
+SET(OPENCMISS_DEPENDENCIES_INSTALL_PREFIX ${OPENCMISS_DEPENDENCIES_DIR}/install/${ARCHITECTURE_PATH}/${BUILDTYPEEXTRA})
 GET_BUILD_COMMANDS(BUILD_COMMAND DUMMY_INSTALL_COMMAND ${OPENCMISS_DEPENDENCIES_BINARY_DIR} FALSE)
 # Add dependency-specific arguments
 SET(DEPENDENCIES_CMAKE_ARGS ${PROJECT_CMAKE_ARGS})
 LIST(APPEND DEPENDENCIES_CMAKE_ARGS
-    -DCMAKE_INSTALL_PREFIX=${OPENCMISS_DEPENDENCIES_DIR}/install/${ARCHITECTURE_PATH}/${BUILDTYPEEXTRA}
+    -DCMAKE_INSTALL_PREFIX=${OPENCMISS_DEPENDENCIES_INSTALL_PREFIX}
 )
 ExternalProject_Add(DEPENDENCIES
     DEPENDS UTILITIES
@@ -156,21 +162,13 @@ ExternalProject_Add(DEPENDENCIES
 )
 
 ########################################################################
-# Remove the CMake Cache of utils/dependencies when calling make clean!
-# Otherwise, changes in the localconfig wont be propagated
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    PROPERTY ADDITIONAL_MAKE_CLEAN_FILES 
-    ${OPENCMISS_UTILITIES_BINARY_DIR}/CMakeCache.txt
-    ${OPENCMISS_DEPENDENCIES_BINARY_DIR}/CMakeCache.txt
-)
-
-########################################################################
 # Iron
 ########################################################################
 if (BUILD_IRON)
     SET(IRON_CMAKE_ARGS ${PROJECT_CMAKE_ARGS})
 	LIST(APPEND IRON_CMAKE_ARGS
 	    -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+	    -DCMAKE_PREFIX_PATH=${OPENCMISS_DEPENDENCIES_INSTALL_PREFIX}/lib/cmake
 	)
 	# iron will include config directly?! (later)
 	if (MPI_HOME)
@@ -179,27 +177,38 @@ if (BUILD_IRON)
         )
     endif()
 	
-    SET(PROJECT_FOLDER ${CMAKE_CURRENT_BINARY_DIR}/iron/${ARCHITECTURE_PATH})
-    GET_BUILD_COMMANDS(LOCAL_PLATFORM_BUILD_COMMAND LOCAL_PLATFORM_INSTALL_COMMAND ${PROJECT_FOLDER} TRUE)
+    SET(IRON_BINARY_DIR ${OPENCMISS_IRON_DIR}/build/${ARCHITECTURE_PATH})
+    GET_BUILD_COMMANDS(BUILD_COMMAND INSTALL_COMMAND ${IRON_BINARY_DIR} TRUE)
     ExternalProject_Add(IRON 
         DEPENDS DEPENDENCIES
-        PREFIX ${PROJECT_FOLDER}
-		TMP_DIR ${PROJECT_FOLDER}/ep_tmp
-		STAMP_DIR ${PROJECT_FOLDER}/ep_stamp
+        PREFIX ${OPENCMISS_IRON_DIR}
+		TMP_DIR ${IRON_BINARY_DIR}/ep_tmp
+		STAMP_DIR ${IRON_BINARY_DIR}/ep_stamp
 		#--Download step--------------
-		DOWNLOAD_DIR ${PROJECT_FOLDER}/ep_dl
+		DOWNLOAD_DIR ${IRON_BINARY_DIR}/ep_dl
         ${USERMODE_DOWNLOAD_CMDS}
 		#--Configure step-------------
 		CMAKE_COMMAND ${CMAKE_COMMAND} --no-warn-unused-cli
-		SOURCE_DIR ${OpenCMISS_SOURCE_DIR}/iron
-		BINARY_DIR ${PROJECT_FOLDER}
+		SOURCE_DIR ${OPENCMISS_IRON_DIR}
+		BINARY_DIR ${IRON_BINARY_DIR}
 		CMAKE_ARGS ${IRON_CMAKE_ARGS}
 		#--Build step-----------------
-		BUILD_COMMAND ${LOCAL_PLATFORM_BUILD_COMMAND}
+		BUILD_COMMAND ${BUILD_COMMAND}
 		#--Install step---------------
-		INSTALL_COMMAND ${LOCAL_PLATFORM_INSTALL_COMMAND}
+		INSTALL_COMMAND ${INSTALL_COMMAND}
 	)
 	#if (OCM_DEVELOPER_MODE)
 	#    ADD_SUBMODULE_CHECKOUT_STEPS(IRON ${OpenCMISS_SOURCE_DIR} iron NO)
     #endif()
 endif()
+
+########################################################################
+# Remove the CMake Cache of subprojects when calling make clean!
+# Otherwise, changes in the localconfig wont be propagated
+# Any better idea?!
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    PROPERTY ADDITIONAL_MAKE_CLEAN_FILES 
+    ${OPENCMISS_UTILITIES_BINARY_DIR}/CMakeCache.txt
+    ${OPENCMISS_DEPENDENCIES_BINARY_DIR}/CMakeCache.txt
+    ${IRON_BINARY_DIR}/CMakeCache.txt
+)
